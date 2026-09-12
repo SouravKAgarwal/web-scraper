@@ -6,9 +6,7 @@ import sys
 import time
 from urllib.parse import urlparse
 from pathlib import Path
-
 import trafilatura
-from bs4 import BeautifulSoup
 from curl_cffi import requests
 
 # Configure logging
@@ -48,16 +46,6 @@ def fetch_with_retries(url, max_retries=3, backoff_factor=2):
             else:
                 logger.error(f"Failed to fetch {url} after {max_retries} attempts.")
                 raise
-
-def extract_fallback(html):
-    """Fallback extraction using BeautifulSoup if Trafilatura fails."""
-    soup = BeautifulSoup(html, "html.parser")
-    
-    # Remove script, style, nav, and footer elements
-    for element in soup(["script", "style", "nav", "footer", "header", "aside"]):
-        element.decompose()
-        
-    return soup.get_text(separator='\n\n', strip=True)
 
 def scrape_webpage(url):
     """Scrape and extract main content from a webpage, returning structured data."""
@@ -149,7 +137,6 @@ def main():
     parser.add_argument("-f", "--file", help="Text file containing a list of URLs (one per line)")
     parser.add_argument("-o", "--output", default="output", help="Directory to save scraped markdown files")
     parser.add_argument("-n", "--limit", type=int, default=None, help="Maximum number of URLs to scrape")
-    parser.add_argument("--json", action="store_true", help="Output structured JSON results to results.json")
     
     args = parser.parse_args()
     

@@ -1,7 +1,7 @@
 [project]
 name = "ai-scraper"
 version = "0.1.0"
-description = "A robust web scraper that extracts content as clean Markdown using Trafilatura and BeautifulSoup, with anti-bot bypass via curl_cffi."
+description = "A robust web scraper that extracts content as clean Markdown"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -9,6 +9,7 @@ dependencies = [
     "curl-cffi>=0.16.3",
     "requests>=2.34.2",
     "trafilatura>=2.2.0",
+    "streamlit>=1.32.0",
 ]
 
 [dependency-groups]

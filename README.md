@@ -4,6 +4,7 @@ A robust web scraper that extracts webpage content as clean **Markdown** files.
 
 ## Features
 
+- **Modern Web UI** — Easy-to-use Streamlit dashboard for scraping single/multiple URLs and sitemaps directly from your browser
 - **Smart content extraction** — Trafilatura-first with BeautifulSoup fallback for maximum coverage
 - **Anti-bot bypass** — Uses `curl_cffi` to impersonate real browsers (Chrome TLS fingerprint)
 - **Retry with backoff** — Automatic retries with exponential backoff on failed requests
@@ -28,7 +29,16 @@ uv sync
 
 ## Usage
 
-### Scrape a single URL
+### Web UI (Recommended)
+
+You can launch the modern web interface to scrape URLs and view results directly in your browser:
+
+```bash
+uv run streamlit run app.py
+```
+*(This will open the dashboard at `http://localhost:8501`)*
+
+### CLI Usage: Scrape a single URL
 
 ```bash
 uv run python main.py https://example.com/article
@@ -86,6 +96,7 @@ uv run python main.py -f urls.txt -n 20
 
 ```
 web-scraper/
+├── app.py               # Streamlit Web UI dashboard
 ├── main.py              # Main scraper — fetches, extracts, and saves content
 ├── scrape_sitemap.py    # Sitemap parser — extracts URLs from XML sitemaps
 ├── urls.txt             # Sample URL list file (one URL per line)
@@ -136,6 +147,7 @@ flowchart LR
 | [beautifulsoup4](https://pypi.org/project/beautifulsoup4/) | HTML parsing fallback |
 | [curl-cffi](https://pypi.org/project/curl-cffi/) | HTTP client with browser TLS impersonation |
 | [requests](https://pypi.org/project/requests/) | HTTP library (transitive dependency) |
+| [streamlit](https://pypi.org/project/streamlit/) | Web application framework for the UI |
 
 ## License
 

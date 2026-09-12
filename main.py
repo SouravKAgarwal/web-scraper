@@ -1,4 +1,5 @@
 import argparse
+import json
 import logging
 import re
 import sys
@@ -59,7 +60,7 @@ def extract_fallback(html):
     return soup.get_text(separator='\n\n', strip=True)
 
 def scrape_webpage(url):
-    """Scrape and extract main content from a webpage."""
+    """Scrape and extract main content from a webpage, returning structured data."""
     logger.info(f"Fetching: {url}")
     html = fetch_with_retries(url)
     
@@ -76,15 +77,7 @@ def scrape_webpage(url):
     
     metadata = trafilatura.extract_metadata(html)
     title = metadata.title if metadata and metadata.title else ""
-    
-    # Fallback to BeautifulSoup if Trafilatura returns empty or very little text
-    if not text or len(text.strip()) < 50:
-        logger.info("Trafilatura extraction failed or returned too little text. Using fallback...")
-        text = extract_fallback(html)
-        if not title:
-            soup = BeautifulSoup(html, "html.parser")
-            title = soup.title.string if soup.title else "Untitled"
-
+        
     if not text:
         raise ValueError("Could not extract any content from the page.")
 
@@ -93,18 +86,31 @@ def scrape_webpage(url):
         parsed_url = urlparse(url)
         title = parsed_url.netloc + parsed_url.path
 
+    # Build description: use meta description or first 200 chars of content
+    description = ""
+    if metadata and metadata.description:
+        description = metadata.description
+    elif text:
+        description = text[:200].rsplit(" ", 1)[0] + "..."
+
     return {
         "url": url,
         "title": title.strip(),
-        "text": text.strip(),
+        "description": description.strip(),
+        "content": text.strip(),
+        "author": (metadata.author if metadata and metadata.author else None),
+        "date": (metadata.date if metadata and metadata.date else None),
+        "image": (metadata.image if metadata and metadata.image else None),
+        "sitename": (metadata.sitename if metadata and metadata.sitename else None),
+        "language": (metadata.language if metadata and metadata.language else None),
+        "word_count": len(text.split()),
     }
 
 def process_url(url, output_dir):
-    """Scrape a URL and save it to the output directory."""
+    """Scrape a URL and save it to the output directory. Returns structured data dict or error dict."""
     try:
         data = scrape_webpage(url)
         
-        # Generate safe filename based on the article's title
         safe_title = slugify(data["title"])[:100]  # Limit length
         if not safe_title:
             safe_title = slugify(url)[:100]
@@ -120,43 +126,30 @@ def process_url(url, output_dir):
             counter += 1
         
         # Add metadata header to markdown
-        content = f"# {data['title']}\n\n"
-        content += f"**Source:** {data['url']}\n\n---\n\n"
-        content += data["text"]
+        md_content = f"# {data['title']}\n\n"
+        md_content += f"**Source:** {data['url']}\n\n---\n\n"
+        md_content += data["content"]
         
         # Ensure the output directory exists
         filepath.parent.mkdir(parents=True, exist_ok=True)
         
         with open(filepath, "w", encoding="utf-8") as f:
-            f.write(content)
+            f.write(md_content)
             
         logger.info(f"Successfully saved to {filepath}\n")
-        return True
+        return data
     except Exception as e:
         logger.error(f"Error processing {url}: {e}\n")
-        return False
+        return {"url": url, "error": str(e)}
 
-def is_interactive():
-    # Check if running in a Jupyter/Interactive Window environment
-    return hasattr(sys, 'ps1') or 'ipykernel' in sys.modules
 
 def main():
-    # If running in Jupyter, sys.argv has kernel arguments which break argparse
-    if is_interactive():
-        print("Interactive mode detected.")
-        url = input("Enter webpage URL: ").strip()
-        if url:
-            if not is_valid_url(url):
-                logger.error(f"Invalid URL: {url}")
-                return
-            process_url(url, "output")
-        return
-
     parser = argparse.ArgumentParser(description="A robust AI Web Scraper")
     parser.add_argument("url", nargs="?", help="A single URL to scrape")
     parser.add_argument("-f", "--file", help="Text file containing a list of URLs (one per line)")
     parser.add_argument("-o", "--output", default="output", help="Directory to save scraped markdown files")
     parser.add_argument("-n", "--limit", type=int, default=None, help="Maximum number of URLs to scrape")
+    parser.add_argument("--json", action="store_true", help="Output structured JSON results to results.json")
     
     args = parser.parse_args()
     
@@ -205,12 +198,30 @@ def main():
 
     logger.info(f"Starting scraping job for {len(target_urls)} URL(s)...")
     
+    start_time = time.time()
+    all_results = []
     success_count = 0
+    
     for url in target_urls:
-        if process_url(url, args.output):
+        result = process_url(url, args.output)
+        all_results.append(result)
+        if "error" not in result:
             success_count += 1
-            
-    logger.info(f"Job completed. Successfully scraped {success_count}/{len(target_urls)} URLs.")
+
+    elapsed = round(time.time() - start_time, 2)
+    logger.info(f"Job completed. Successfully scraped {success_count}/{len(target_urls)} URLs in {elapsed}s.")
+
+    output = {
+            "results": [r for r in all_results if "error" not in r],
+            "failed_results": [r for r in all_results if "error" in r],
+            "total": len(target_urls),
+            "successful": success_count,
+            "response_time": elapsed,
+        }
+
+
+    return output
 
 if __name__ == "__main__":
-    main()
+    res = main()
+    print(json.dumps(res, indent=4, ensure_ascii=False))

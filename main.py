@@ -2,6 +2,7 @@
 Main script for scraping and processing web pages.
 Provides functionality to scrape single URLs or a list of URLs from a file.
 """
+
 import argparse
 import json
 import logging
@@ -62,6 +63,13 @@ def scrape_webpage(url: str) -> dict:
         for tag in pre.find_all(True):
             tag.unwrap()
 
+    # Absolutize all links and images
+    from urllib.parse import urljoin
+    for a in soup.find_all('a', href=True):
+        a['href'] = urljoin(url, a['href'])
+    for img in soup.find_all('img', src=True):
+        img['src'] = urljoin(url, img['src'])
+
     # Try Trafilatura first (best for articles)
     text = trafilatura.extract(
         str(soup),
@@ -70,11 +78,45 @@ def scrape_webpage(url: str) -> dict:
         include_formatting=True,
         include_links=True,
         include_images=True,
-        include_comments=False,
+        include_comments=False
     )
 
     metadata = trafilatura.extract_metadata(html)
     title = metadata.title if metadata and metadata.title else ""
+
+    # Fallback to markdownify if Trafilatura strips too much (e.g. link directories/API refs)
+    use_fallback = False
+    if not text:
+        use_fallback = True
+    elif len(text.split()) < 200:
+        total_links = len(soup.find_all('a', href=True))
+        if total_links > 20:
+            use_fallback = True
+
+    if use_fallback:
+        logger.info(f"Sparse extraction detected. Falling back to markdownify for {url}")
+        import markdownify
+        import re
+        
+        main_content = None
+        for selector in ['main', 'article', '[role="main"]', '#main-content', '.main-content', '#content', '#main']:
+            main_content = soup.select_one(selector)
+            if main_content: break
+            
+        if not main_content:
+            main_content = soup.body
+
+        if main_content:
+            # Strip noise
+            for tag in main_content.find_all(['script', 'style', 'nav', 'header', 'footer', 'aside', 'noscript', 'iframe']):
+                tag.decompose()
+                
+            text = markdownify.markdownify(
+                str(main_content), 
+                heading_style="ATX",
+                strip=["script", "style"]
+            ).strip()
+            text = re.sub(r'\n{3,}', '\n\n', text)
 
     if not text:
         raise ValueError("Could not extract any content from the page.")

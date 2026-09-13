@@ -1,69 +1,211 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Web Scraper</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🕸️</text></svg>">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github-dark.min.css">
-    <link rel="stylesheet" href="/static/style.css">
-</head>
-<body>
-    <div class="header">
-        <h1><span>🕸️</span>Web Scraper</h1>
-        <p>Extract clean Markdown content from any webpage</p>
-    </div>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MDScrape — Web to Markdown</title>
+    <meta name="description" content="Turn webpages into clean Markdown." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/static/style.css" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 208 128'%3E%3Cstyle%3Epath{fill:%23111;}@media(prefers-color-scheme:dark){path{fill:%23fff;}}%3C/style%3E%3Cpath d='M30 98v-68h20l20 25 20-25h20v68h-20v-39l-20 25-20-25v39h-20zm125 0l-30-33h20v-35h20v35h20l-30 33z'/%3E%3C/svg%3E" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="topbar">
+        <a class="brand" href="#">
+          <span class="brand-mark" style="color: #fff;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="11" viewBox="0 0 208 128">
+              <path d="M30 98v-68h20l20 25 20-25h20v68h-20v-39l-20 25-20-25v39h-20zm125 0l-30-33h20v-35h20v35h20l-30 33z" fill="currentColor"/>
+            </svg>
+          </span>
+          <span>MDScrape</span>
+        </a>
 
-    <div class="container">
-        <!-- Mode Toggle -->
-        <div class="mode-toggle">
-            <button class="active" data-mode="urls">URLs</button>
-            <button data-mode="sitemap">Sitemap</button>
+        <div class="topbar-actions">
+          <a href="#how-it-works">How it works</a>
+          <a href="#output">Output</a>
+          <button class="ghost-btn" id="githubBtn" type="button">
+            GitHub ↗
+          </button>
         </div>
+      </header>
 
-        <!-- URL Input -->
-        <div class="form-group">
-            <label id="url-label">URLs (one per line)</label>
+      <main>
+        <section class="hero">
+          <div class="eyebrow"><span></span> WEB → MARKDOWN</div>
+          <h1>Turn any webpage into<br /><em>clean Markdown.</em></h1>
+          <p class="hero-copy">
+            Paste a URL or sitemap. Get readable, LLM-friendly Markdown without
+            the HTML noise.
+          </p>
+        </section>
+
+        <section class="workspace" aria-label="Web scraper" style="display: block;">
+          <div class="panel input-panel" style="margin: 0 auto; max-width: 700px;">
+            <div class="panel-head">
+              <div>
+                <div class="panel-kicker">01 / SOURCE</div>
+                <h2>Choose what to scrape</h2>
+              </div>
+              <span class="status-pill idle" id="sourceStatus">READY</span>
+            </div>
+
+            <div class="tabs" role="tablist">
+              <button class="tab active" type="button" data-mode="urls">
+                URLs
+              </button>
+              <button class="tab" type="button" data-mode="sitemap">
+                Sitemap
+              </button>
+            </div>
+
+            <label class="field-label" id="urlLabel"
+              >URLs <span>one per line</span></label
+            >
             <textarea
-                id="url-input"
-                rows="6"
-                placeholder="https://example.com/page1&#10;https://example.com/page2"
+              id="urlInput"
+              class="url-input"
+              spellcheck="false"
+              placeholder="https://example.com&#10;https://example.com/docs&#10;https://example.com/blog"
             ></textarea>
-        </div>
 
-        <!-- Settings Row -->
-        <div class="form-row">
-            <div class="form-group">
-                <label for="limit-input">Limit (0 = unlimited)</label>
-                <input type="number" id="limit-input" value="0" min="0">
+            <div class="field-row">
+              <div class="field-wrap">
+                <label class="field-label" for="limit"
+                  >LIMIT <span>0 = unlimited</span></label
+                >
+                <input
+                  id="limit"
+                  class="text-input"
+                  type="number"
+                  min="0"
+                  value="0"
+                />
+              </div>
+              <div class="field-wrap compact-note">
+                <label class="field-label">OUTPUT</label>
+                <div class="static-select">Markdown <span>✓</span></div>
+              </div>
             </div>
-        </div>
 
-        <!-- Scrape Button -->
-        <button class="btn-primary" id="scrape-btn">🚀 Start Scraping</button>
+            <details class="advanced">
+              <summary>Advanced options <span>+</span></summary>
+              <div class="advanced-grid">
+                <label class="check">
+                  <input type="checkbox" id="keepLinks" checked />
+                  <span>Keep links</span>
+                </label>
+                <label class="check">
+                  <input type="checkbox" id="includeMeta" checked />
+                  <span>Include metadata</span>
+                </label>
+              </div>
+            </details>
 
-        <!-- Status Message -->
-        <div class="status-message" id="status-message"></div>
+            <button class="scrape-btn" id="scrapeBtn" type="button">
+              <span class="btn-icon">→</span>
+              <span id="scrapeText">Start scraping</span>
+            </button>
 
-        <!-- Progress Bar -->
-        <div class="progress-container" id="progress-container">
-            <div class="progress-bar-wrapper">
-                <div class="progress-bar-fill" id="progress-fill"></div>
+            <div class="hint">
+              <span>⌘</span> Tip: paste multiple URLs at once
             </div>
-            <div class="progress-text" id="progress-text">Waiting...</div>
-        </div>
+          </div>
+        </section>
 
-        <!-- Results -->
-        <div id="results-section" style="display: none;">
-            <h2>Results</h2>
-            <div id="results-container"></div>
-        </div>
+        <section class="results-grid-section" id="output">
+          <div class="results-grid-header">
+            <div class="result-meta">
+              <span id="resultState">Waiting for a scrape</span>
+              <span id="stats">0 words · 0 chars</span>
+            </div>
+            <div class="output-actions">
+              <button class="icon-btn" id="copyBtn" title="Copy output" type="button">
+                Copy All
+              </button>
+              <button class="icon-btn" id="downloadBtn" title="Download Markdown" type="button">
+                ↓ .md
+              </button>
+            </div>
+          </div>
+
+          <div id="cardsContainer" class="cards-container">
+            <!-- Dynamic cards go here -->
+          </div>
+          <pre id="outputText" style="display: none;"></pre>
+        </section>
+
+        <section class="trust-strip">
+          <span><strong>Built for:</strong></span>
+          <span>LLM prompts</span>
+          <span>RAG pipelines</span>
+          <span>Docs</span>
+          <span>Content extraction</span>
+        </section>
+
+        <section class="how" id="how-it-works">
+          <div class="section-intro">
+            <div class="panel-kicker">HOW IT WORKS</div>
+            <h2>From noisy webpage<br />to useful content.</h2>
+          </div>
+
+          <div class="steps">
+            <article>
+              <span>01</span>
+              <h3>Paste</h3>
+              <p>Add one URL, many URLs, or a sitemap.</p>
+            </article>
+            <article>
+              <span>02</span>
+              <h3>Scrape</h3>
+              <p>Fetch and clean the page content.</p>
+            </article>
+            <article>
+              <span>03</span>
+              <h3>Use</h3>
+              <p>Copy or download lightweight Markdown.</p>
+            </article>
+          </div>
+        </section>
+      </main>
+
+      <footer>
+        <span>© MDScrape</span>
+        <span>Simple. Fast. Markdown-first.</span>
+      </footer>
     </div>
+
+    <dialog id="previewModal" class="preview-modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 id="modalTitle">Preview</h3>
+          <div class="modal-actions">
+            <button class="icon-btn" id="modalCopyBtn" type="button">Copy</button>
+            <button class="icon-btn" id="modalDownloadBtn" type="button">↓ .md</button>
+            <button class="icon-btn close-btn" id="modalCloseBtn" type="button">✕</button>
+          </div>
+        </div>
+        <div class="modal-body">
+          <div class="modal-split">
+            <div class="modal-pane markdown-pane">
+              <div class="pane-title">Markdown</div>
+              <pre id="modalMarkdownContent"></pre>
+            </div>
+            <div class="modal-pane html-pane">
+              <div class="pane-title">Preview</div>
+              <div id="modalHtmlPreview" class="prose"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
     <script src="/static/script.js"></script>
-</body>
+  </body>
 </html>

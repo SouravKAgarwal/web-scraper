@@ -90,7 +90,7 @@ uv run scrape_sitemap.py https://example.com/sitemap.xml -o urls.txt
 
 ```bash
 uv run scrape_sitemap.py https://example.com/sitemap.xml -o urls.txt
-uv run python main.py -f urls.txt -n 20
+uv run main.py -f urls.txt -n 20
 ```
 
 ## Project Structure
@@ -139,7 +139,6 @@ Streams scrape results via Server-Sent Events (SSE).
 ```json
 {
   "urls": ["https://example.com/page1", "https://example.com/page2"],
-  "sitemap": false,
   "limit": 0
 }
 ```
@@ -154,10 +153,10 @@ import requests
 result = {}
 
 
-def scrape_result(urls: list, sitemap: bool = False, limit: int = 0) -> dict:
+def scrape_result(urls: list, limit: int = 0) -> dict:
     resp = requests.post(
         url="http://localhost:8000/scrape",
-        json={"urls": urls, "sitemap": sitemap, "limit": limit},
+        json={"urls": urls, "limit": limit},
         stream=True,
     )
 

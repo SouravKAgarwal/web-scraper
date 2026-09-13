@@ -19,7 +19,6 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 class ScrapeRequest(BaseModel):
     urls: list[str]
-    sitemap: bool = False
     limit: int = 0
 
 
@@ -129,4 +128,3 @@ async def scrape(req: ScrapeRequest):
         }
 
     return EventSourceResponse(event_generator())
-

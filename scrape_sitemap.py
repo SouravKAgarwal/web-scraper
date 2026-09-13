@@ -1,50 +1,43 @@
+"""
+Script to extract URLs from sitemap XML files.
+Supports both standard sitemaps and sitemap indexes.
+"""
 import argparse
 import logging
-import time
 import xml.etree.ElementTree as ET
 
 from curl_cffi import requests
 
+from helpers import fetch_with_retries
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    jls_extract_var="%(asctime)s [%(levelname)s] %(message)s",
+    format="%(asctime)s [%(levelname)s] %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 logger = logging.getLogger(__name__)
 
 
-def fetch_with_retries(url, max_retries=3, backoff_factor=2):
-    """Fetch URL with retries and exponential backoff."""
-    for attempt in range(max_retries):
-        try:
-            response = requests.get(url, impersonate="chrome110", timeout=15)
-            response.raise_for_status()
-            return response.content
-        except (requests.RequestsError, OSError) as e:
-            logger.warning(f"Attempt {attempt + 1}/{max_retries} failed for {url}: {e}")
-            if attempt < max_retries - 1:
-                time.sleep(backoff_factor * (attempt + 1))
-            else:
-                logger.error(f"Failed to fetch {url} after {max_retries} attempts.")
-                raise
-
-
-def extract_urls_from_sitemap(sitemap_url, max_depth=5):
+def extract_urls_from_sitemap(sitemap_url: str, max_depth: int = 5) -> list[str]:
     """
     Fetches a sitemap XML and extracts all the URLs found within it.
-    Supports basic sitemaps and sitemap indexes.
+    Supports basic sitemaps and sitemap indexes. Recursively processes sitemap indexes.
 
     Args:
-        sitemap_url: URL of the sitemap to fetch.
-        max_depth: Maximum recursion depth for sitemap indexes (prevents infinite loops).
+        sitemap_url (str): The URL of the sitemap or sitemap index to fetch.
+        max_depth (int, optional): Maximum recursion depth for sitemap indexes 
+            to prevent infinite loops. Defaults to 5.
+
+    Returns:
+        list[str]: A list of extracted URLs. Returns an empty list if extraction fails.
     """
     if max_depth <= 0:
         logger.warning(f"Maximum recursion depth reached. Skipping: {sitemap_url}")
         return []
 
     try:
-        content = fetch_with_retries(sitemap_url)
+        content = fetch_with_retries(sitemap_url, return_bytes=True)
     except (requests.RequestsError, OSError) as e:
         logger.error(f"Error fetching sitemap {sitemap_url}: {e}")
         return []
@@ -89,7 +82,11 @@ def extract_urls_from_sitemap(sitemap_url, max_depth=5):
     return urls
 
 
-if __name__ == "__main__":
+def main():
+    """
+    Main entry point for the sitemap extraction script. Parses arguments,
+    fetches the sitemap, extracts URLs, and optionally saves them to a file.
+    """
     parser = argparse.ArgumentParser(description="Extract URLs from a sitemap XML.")
     parser.add_argument(
         "sitemap_url",
@@ -118,3 +115,7 @@ if __name__ == "__main__":
     else:
         for url in unique_urls:
             print(url)
+
+
+if __name__ == "__main__":
+    main()

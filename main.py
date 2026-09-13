@@ -1,13 +1,18 @@
+"""
+Main script for scraping and processing web pages.
+Provides functionality to scrape single URLs or a list of URLs from a file.
+"""
 import argparse
 import json
 import logging
-import re
 import time
 from urllib.parse import urlparse
 
 import trafilatura
 from bs4 import BeautifulSoup
 from curl_cffi import requests
+
+from helpers import clean_markdown, fetch_with_retries, is_valid_url
 
 # Configure logging
 logging.basicConfig(
@@ -18,68 +23,32 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def is_valid_url(url):
-    """Check if a string looks like a valid HTTP(S) URL."""
-    parsed = urlparse(url)
-    return parsed.scheme in ("http", "https") and bool(parsed.netloc)
+def scrape_webpage(url: str) -> dict:
+    """
+    Scrape and extract main content from a webpage, returning structured data.
 
+    This function fetches the HTML content of the provided URL, pre-processes it to handle
+    parsing bugs, and extracts the main text and metadata using Trafilatura.
 
-def fetch_with_retries(url, max_retries=3, backoff_factor=2):
-    """Fetch URL with retries and exponential backoff."""
-    headers = {
-        "Accept-Language": "en-US,en;q=0.9",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-    }
+    Args:
+        url (str): The URL of the webpage to scrape.
 
-    for attempt in range(max_retries):
-        try:
-            response = requests.get(
-                url, headers=headers, timeout=15, impersonate="chrome"
-            )
-            response.raise_for_status()
-            return response.text
-        except (requests.RequestsError, OSError) as e:
-            logger.warning(f"Attempt {attempt + 1}/{max_retries} failed: {e}")
-            if attempt < max_retries - 1:
-                time.sleep(backoff_factor * (attempt + 1))
-            else:
-                logger.error(f"Failed to fetch {url} after {max_retries} attempts.")
-                raise
+    Returns:
+        dict: A dictionary containing the scraped data:
+            - url (str): The original URL.
+            - title (str): The title of the webpage.
+            - description (str): A brief description or snippet of the content.
+            - content (str): The extracted main text content formatted as Markdown.
+            - author (str | None): The author of the content, if found.
+            - date (str | None): The publication date, if found.
+            - image (str | None): The primary image URL, if found.
+            - sitename (str | None): The name of the website, if found.
+            - language (str | None): The language of the content, if found.
+            - word_count (int): The number of words in the extracted content.
 
-
-def clean_markdown(text):
-    if not text:
-        return text
-
-    # 1. Fix incorrect bullet position (includes nested lists):
-    # Trafilatura splits definition lists into separate bullets and newlines.
-    # We merge them: "  - \n **Term** \n  - \n Definition"
-    text = re.sub(
-        r"^(\s*)-\s*\n\s*\*\*(.*?)\*\*\s*\n\1-\s*\n\s*",
-        r"\1- **\2**: ",
-        text,
-        flags=re.MULTILINE,
-    )
-
-    # 2. Handle a variation where it doesn't add a second hyphen
-    text = re.sub(
-        r"^(\s*)-\s*\n\s*\*\*(.*?)\*\*\s*\n\s*",
-        r"\1- **\2**: ",
-        text,
-        flags=re.MULTILINE,
-    )
-
-    # 3. Remove any remaining standalone empty bullets
-    text = re.sub(r"^\s*-\s*\n", "", text, flags=re.MULTILINE)
-
-    # 4. Remove multiple consecutive blank lines
-    text = re.sub(r"\n{3,}", "\n\n", text)
-
-    return text.strip()
-
-
-def scrape_webpage(url):
-    """Scrape and extract main content from a webpage, returning structured data."""
+    Raises:
+        ValueError: If no content could be extracted from the page.
+    """
     logger.info(f"Fetching: {url}")
     html = fetch_with_retries(url)
 
@@ -138,8 +107,17 @@ def scrape_webpage(url):
     }
 
 
-def process_url(url):
-    """Scrape a URL and return structured data with formatted markdown content."""
+def process_url(url: str) -> dict:
+    """
+    Safely scrape a URL and return structured data, handling any exceptions.
+
+    Args:
+        url (str): The URL to scrape.
+
+    Returns:
+        dict: The structured data dictionary on success, or a dictionary containing
+              the 'url' and 'error' message on failure.
+    """
     try:
         data = scrape_webpage(url)
 
@@ -150,7 +128,13 @@ def process_url(url):
         return {"url": url, "error": str(e)}
 
 
-def main():
+def main() -> dict | None:
+    """
+    Main entry point for the CLI script. Parses arguments and executes the scraping job.
+
+    Returns:
+        dict | None: A summary of the scraping results, or None if validation fails.
+    """
     parser = argparse.ArgumentParser(description="A robust AI Web Scraper")
     parser.add_argument("url", nargs="?", help="A single URL to scrape")
     parser.add_argument(
@@ -237,4 +221,5 @@ def main():
 
 if __name__ == "__main__":
     res = main()
-    print(json.dumps(res, indent=4, ensure_ascii=False))
+    if res:
+        print(json.dumps(res, indent=4, ensure_ascii=False))

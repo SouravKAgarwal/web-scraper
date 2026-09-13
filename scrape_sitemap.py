@@ -1,7 +1,6 @@
 import argparse
 import logging
 import time
-import sys
 import xml.etree.ElementTree as ET
 
 from curl_cffi import requests
@@ -9,10 +8,11 @@ from curl_cffi import requests
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S"
+    jls_extract_var="%(asctime)s [%(levelname)s] %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
 )
 logger = logging.getLogger(__name__)
+
 
 def fetch_with_retries(url, max_retries=3, backoff_factor=2):
     """Fetch URL with retries and exponential backoff."""
@@ -29,6 +29,7 @@ def fetch_with_retries(url, max_retries=3, backoff_factor=2):
                 logger.error(f"Failed to fetch {url} after {max_retries} attempts.")
                 raise
 
+
 def extract_urls_from_sitemap(sitemap_url, max_depth=5):
     """
     Fetches a sitemap XML and extracts all the URLs found within it.
@@ -44,33 +45,39 @@ def extract_urls_from_sitemap(sitemap_url, max_depth=5):
 
     try:
         content = fetch_with_retries(sitemap_url)
-    except Exception as e:
+    except (requests.RequestsError, OSError) as e:
         logger.error(f"Error fetching sitemap {sitemap_url}: {e}")
         return []
 
     urls = []
-    
+
     try:
         root = ET.fromstring(content)
-        
+
         # Namespaces are commonly used in sitemaps
         # Extract namespace if present
-        namespace = ''
-        if '}' in root.tag:
-            namespace = root.tag.split('}')[0] + '}'
-            
+        namespace = ""
+        if "}" in root.tag:
+            namespace = root.tag.split("}")[0] + "}"
+
         # Check if this is a sitemapindex
-        if root.tag.endswith('sitemapindex'):
-            logger.info(f"Found sitemap index at {sitemap_url}. Processing child sitemaps...")
-            for sitemap in root.findall(f'{namespace}sitemap'):
-                loc = sitemap.find(f'{namespace}loc')
+        if root.tag.endswith("sitemapindex"):
+            logger.info(
+                f"Found sitemap index at {sitemap_url}. Processing child sitemaps..."
+            )
+            for sitemap in root.findall(f"{namespace}sitemap"):
+                loc = sitemap.find(f"{namespace}loc")
                 if loc is not None and loc.text:
                     child_sitemap_url = loc.text
-                    urls.extend(extract_urls_from_sitemap(child_sitemap_url, max_depth=max_depth - 1))
+                    urls.extend(
+                        extract_urls_from_sitemap(
+                            child_sitemap_url, max_depth=max_depth - 1
+                        )
+                    )
         # Otherwise, process as a standard sitemap
-        elif root.tag.endswith('urlset'):
-            for url in root.findall(f'{namespace}url'):
-                loc = url.find(f'{namespace}loc')
+        elif root.tag.endswith("urlset"):
+            for url in root.findall(f"{namespace}url"):
+                loc = url.find(f"{namespace}loc")
                 if loc is not None and loc.text:
                     urls.append(loc.text)
         else:
@@ -78,32 +85,35 @@ def extract_urls_from_sitemap(sitemap_url, max_depth=5):
 
     except ET.ParseError as e:
         logger.error(f"Error parsing XML from {sitemap_url}: {e}")
-        
+
     return urls
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Extract URLs from a sitemap XML.")
-    parser.add_argument("sitemap_url", help="The URL of the sitemap (e.g., https://example.com/sitemap.xml)")
+    parser.add_argument(
+        "sitemap_url",
+        help="The URL of the sitemap (e.g., https://example.com/sitemap.xml)",
+    )
     parser.add_argument("-o", "--output", help="Optional output file to save the URLs")
-    
+
     args = parser.parse_args()
-    
+
     logger.info(f"Fetching sitemap from: {args.sitemap_url}")
     extracted_urls = extract_urls_from_sitemap(args.sitemap_url)
-    
+
     # Remove duplicates while preserving order
     seen = set()
     unique_urls = [x for x in extracted_urls if not (x in seen or seen.add(x))]
-    
+
     logger.info(f"Found {len(unique_urls)} unique URLs.")
-    
+
     if args.output:
         try:
-            with open(args.output, 'w', encoding='utf-8') as f:
-                for url in unique_urls:
-                    f.write(f"{url}\n")
+            with open(args.output, "w", encoding="utf-8") as f:
+                f.writelines(f"{url}\n" for url in unique_urls)
             logger.info(f"Saved URLs to {args.output}")
-        except IOError as e:
+        except OSError as e:
             logger.error(f"Error saving to {args.output}: {e}")
     else:
         for url in unique_urls:

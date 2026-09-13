@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Scraper</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🕸️</text></svg>">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github-dark.min.css">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="header">
+        <h1><span>🕸️</span>Web Scraper</h1>
+        <p>Extract clean Markdown content from any webpage</p>
+    </div>
+
+    <div class="container">
+        <!-- Mode Toggle -->
+        <div class="mode-toggle">
+            <button class="active" data-mode="urls">URLs</button>
+            <button data-mode="sitemap">Sitemap</button>
+        </div>
+
+        <!-- URL Input -->
+        <div class="form-group">
+            <label id="url-label">URLs (one per line)</label>
+            <textarea
+                id="url-input"
+                rows="6"
+                placeholder="https://example.com/page1&#10;https://example.com/page2"
+            ></textarea>
+        </div>
+
+        <!-- Settings Row -->
+        <div class="form-row">
+            <div class="form-group">
+                <label for="limit-input">Limit (0 = unlimited)</label>
+                <input type="number" id="limit-input" value="0" min="0">
+            </div>
+        </div>
+
+        <!-- Scrape Button -->
+        <button class="btn-primary" id="scrape-btn">🚀 Start Scraping</button>
+
+        <!-- Status Message -->
+        <div class="status-message" id="status-message"></div>
+
+        <!-- Progress Bar -->
+        <div class="progress-container" id="progress-container">
+            <div class="progress-bar-wrapper">
+                <div class="progress-bar-fill" id="progress-fill"></div>
+            </div>
+            <div class="progress-text" id="progress-text">Waiting...</div>
+        </div>
+
+        <!-- Results -->
+        <div id="results-section" style="display: none;">
+            <h2>Results</h2>
+            <div id="results-container"></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
+    <script src="/static/script.js"></script>
+</body>
+</html>
